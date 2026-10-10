@@ -3,3 +3,9 @@
 
 # No need to store the pnpm store twice.
 .local
+/.conversation
+
+# Foundry build output is reproducible and not needed in a web deployment.
+artifacts/monarch-lens/contracts/out
+artifacts/monarch-lens/contracts/cache
+artifacts/monarch-lens/contracts/broadcast

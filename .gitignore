@@ -47,3 +47,12 @@ Thumbs.db
 # Replit
 .cache/
 .local/
+/.conversation/
+
+# Monarch Lens local configuration and Foundry build output
+.env
+.env.*
+!.env.example
+artifacts/monarch-lens/contracts/out/
+artifacts/monarch-lens/contracts/cache/
+artifacts/monarch-lens/contracts/broadcast/

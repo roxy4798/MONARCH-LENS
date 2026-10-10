@@ -1,0 +1,28 @@
+kind = "web"
+previewPath = "/"
+title = "Monarch Lens"
+description = "A Monad Testnet observability and contract benchmarking workspace for EVM developers. Inspect real transaction data, run repeatable contract tests, and verify report hashes against an onchain registry."
+version = "1.0.0"
+id = "artifacts/monarch-lens"
+router = "path"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 26215
+
+[services.development]
+run = "pnpm --filter @workspace/monarch-lens run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/monarch-lens", "run", "build" ]
+serve = "static"
+publicDir = "artifacts/monarch-lens/dist/public"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "26215"
+BASE_PATH = "/"
