@@ -159,7 +159,7 @@ function Shell({ children, wallet, rpcStatus }: { children: ReactNode; wallet: R
   return <div className="app-shell">
     <aside className="sidebar">
       <Link href="/" className="brand" title="Monarch Lens">
-        <img src="/monarch-lens-logo.png" alt="Monarch Lens" className="brand-logo-img" />
+        <img src={`${import.meta.env.BASE_URL}monarch-lens-logo.png`} alt="Monarch Lens" className="brand-logo-img" />
       </Link>
       <div className="nav-label">WORKSPACE</div>
       <nav>{navigation.map(({ href, label, icon: Icon }) => <Link key={href} href={href} className={`nav-link ${location === href ? 'active' : ''}`} data-testid={`link-${label.toLowerCase().replaceAll(' ', '-')}`}><Icon/><span>{label}</span></Link>)}</nav>
