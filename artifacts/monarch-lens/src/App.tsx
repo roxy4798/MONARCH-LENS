@@ -116,7 +116,25 @@ function useWallet() {
     } catch (e) { setError(e instanceof Error ? e.message : 'Wallet connection was rejected.'); return null; }
     finally { setConnecting(false); }
   }, []);
-  return { address, chainId, error, connecting, connect, refresh };
+  const switchNetwork = useCallback(async () => {
+    if (!window.ethereum) return;
+    try {
+      await window.ethereum.request({ method: 'wallet_switchEthereumChain', params: [{ chainId: '0x279f' }] });
+      await refresh();
+    } catch (switchError: unknown) {
+      const err = switchError as { code?: number };
+      if (err?.code === 4902) {
+        try {
+          await window.ethereum.request({
+            method: 'wallet_addEthereumChain',
+            params: [{ chainId: '0x279f', chainName: 'Monad Testnet', nativeCurrency: { name: 'MON', symbol: 'MON', decimals: 18 }, rpcUrls: ['https://testnet-rpc.monad.xyz'], blockExplorerUrls: ['https://testnet.monadvision.com'] }],
+          });
+          await refresh();
+        } catch { /* ignored */ }
+      }
+    }
+  }, [refresh]);
+  return { address, chainId, error, connecting, connect, refresh, switchNetwork };
 }
 
 const navigation = [
@@ -129,17 +147,70 @@ const navigation = [
 function Shell({ children, wallet, rpcStatus }: { children: ReactNode; wallet: ReturnType<typeof useWallet>; rpcStatus: ReturnType<typeof useNetworkStatus> }) {
   const [location] = useLocation();
   const page = navigation.find(item => item.href === location)?.label ?? 'Network';
-  const connect = async () => { if (wallet.address) return; await wallet.connect(); };
+  const isWrongNetwork = Boolean(wallet.address && wallet.chainId !== CHAIN_ID);
+  const connect = async () => {
+    if (isWrongNetwork) {
+      await wallet.switchNetwork();
+      return;
+    }
+    if (wallet.address) return;
+    await wallet.connect();
+  };
   return <div className="app-shell">
     <aside className="sidebar">
-      <Link href="/" className="brand"><LogoMark className="brand-mark"/><div className="brand-word"><div className="brand-name">MONARCH LENS</div><div className="brand-caption">MONAD TESTNET / OBSERVABILITY</div></div></Link>
+      <Link href="/" className="brand" title="Monarch Lens">
+        <img src="/monarch-lens-logo.png" alt="Monarch Lens" className="brand-logo-img" />
+      </Link>
       <div className="nav-label">WORKSPACE</div>
       <nav>{navigation.map(({ href, label, icon: Icon }) => <Link key={href} href={href} className={`nav-link ${location === href ? 'active' : ''}`} data-testid={`link-${label.toLowerCase().replaceAll(' ', '-')}`}><Icon/><span>{label}</span></Link>)}</nav>
-      <div className="sidebar-bottom"><div className="network-chip"><div className="net-head"><span className="live-dot"/><span>Monad Testnet</span></div><div className="net-sub">{rpcStatus.loading ? 'CHECKING RPC' : rpcStatus.error?.startsWith('Unexpected chain ID') ? 'CHAIN MISMATCH' : rpcStatus.error ? 'RPC UNAVAILABLE' : 'CHAIN 10143 · LIVE RPC'}</div></div></div>
+      <div className="sidebar-bottom">
+        <div className="network-chip">
+          <div className="net-head">
+            <span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <span className={`live-dot ${rpcStatus.error ? 'fail-text' : ''}`}/>
+              <span>Monad Testnet</span>
+            </span>
+            <span className="badge neutral mono" style={{ padding: '2px 6px', fontSize: '9px' }}>10143</span>
+          </div>
+          <div className="net-sub">{rpcStatus.loading ? 'SYNCING RPC…' : rpcStatus.error?.startsWith('Unexpected chain ID') ? 'CHAIN MISMATCH' : rpcStatus.error ? 'RPC UNAVAILABLE' : rpcStatus.blockNumber ? `BLOCK #${hexInt(rpcStatus.blockNumber)?.toLocaleString()}` : 'CHAIN 10143 · LIVE'}</div>
+        </div>
+        <div style={{ display: 'flex', gap: '10px', padding: '2px 6px 0', fontSize: '10px' }}>
+          <a href="https://testnet.monadvision.com" target="_blank" rel="noreferrer" style={{ color: '#9D8DF1', textDecoration: 'none', fontWeight: 600 }}>MonadVision ↗</a>
+          <span style={{ color: '#555' }}>·</span>
+          <a href="https://faucet.monad.xyz" target="_blank" rel="noreferrer" style={{ color: '#9D8DF1', textDecoration: 'none', fontWeight: 600 }}>Faucet ↗</a>
+        </div>
+      </div>
     </aside>
     <main className="main">
-      <header className="topbar"><div className="crumb">MONARCH LENS <ChevronRight size={12}/> {page.toUpperCase()}</div><div className="top-right"><div className="top-network"><span className={`live-dot ${rpcStatus.error ? 'fail-text' : ''}`}/>{rpcStatus.error?.startsWith('Unexpected chain ID') ? 'Chain mismatch' : rpcStatus.error ? 'RPC unavailable' : 'Monad Testnet'}</div><button className="wallet-button" onClick={connect} data-testid="button-connect-wallet"><Wallet/>{wallet.address ? short(wallet.address, 6, 4) : wallet.connecting ? 'Connecting…' : 'Connect wallet'}</button></div></header>
-      {wallet.error && <div style={{padding:'10px 34px 0'}}><div className="inline-message">{wallet.error}</div></div>}
+      <header className="topbar">
+        <div className="crumb">
+          <span style={{ color: '#836EF9', fontWeight: 700 }}>MONARCH LENS</span>
+          <ChevronRight size={12}/>
+          <span className="crumb-current">{page.toUpperCase()}</span>
+        </div>
+        <div className="top-right">
+          <div className="top-network">
+            <span className={`live-dot ${rpcStatus.error ? 'fail-text' : ''}`}/>
+            <span>{rpcStatus.error ? 'RPC issue' : 'Monad Testnet (10143)'}</span>
+          </div>
+          <button
+            className="wallet-button"
+            onClick={connect}
+            data-testid="button-connect-wallet"
+            style={isWrongNetwork ? { borderColor: '#F87171', color: '#FCA5A5' } : {}}
+          >
+            <Wallet/>
+            {isWrongNetwork
+              ? 'Switch to Monad (10143)'
+              : wallet.address
+              ? short(wallet.address, 6, 4)
+              : wallet.connecting
+              ? 'Connecting…'
+              : 'Connect wallet'}
+          </button>
+        </div>
+      </header>
+      {wallet.error && <div style={{padding:'14px 36px 0'}}><div className="inline-message">{wallet.error}</div></div>}
       {children}
     </main>
   </div>;
@@ -150,6 +221,43 @@ function StateMessage({ error, success, neutral }: { error?: string; success?: s
 function NetworkPage({ network }: { network: ReturnType<typeof useNetworkStatus> }) {
   const correct = network.chainId === CHAIN_ID && !network.error;
   return <div className="content fade-in">
+    <div style={{
+      background: 'linear-gradient(135deg, rgba(131, 110, 249, 0.16) 0%, rgba(14, 12, 24, 0.95) 100%)',
+      border: '1px solid rgba(131, 110, 249, 0.28)',
+      borderRadius: '12px',
+      padding: '24px 28px',
+      marginBottom: '26px',
+      boxShadow: '0 4px 24px -2px rgba(0,0,0,0.5), 0 0 20px -4px rgba(131,110,249,0.2)',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      gap: '20px',
+      flexWrap: 'wrap'
+    }}>
+      <div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '9px', marginBottom: '8px' }}>
+          <span className="live-dot" />
+          <span style={{ fontSize: '11px', fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', color: '#9D8DF1' }}>
+            MONAD TESTNET · HIGH-PERFORMANCE EVM
+          </span>
+          <span className="badge neutral mono" style={{ fontSize: '9px', padding: '2px 6px' }}>CHAIN 10143</span>
+        </div>
+        <h2 style={{ fontSize: '22px', fontWeight: 800, margin: '0 0 6px', color: '#FFFFFF', letterSpacing: '-0.03em' }}>
+          Monad Developer Observability & Benchmarks
+        </h2>
+        <p style={{ margin: 0, fontSize: '13px', color: '#B4B0C2', maxWidth: '680px', lineHeight: '1.6' }}>
+          Inspect live transaction execution receipts directly from the official public Monad RPC, run deterministic contract benchmarks, and verify cryptographic SHA-256 commitments onchain.
+        </p>
+      </div>
+      <div style={{ display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap' }}>
+        <a href="https://testnet.monadvision.com" target="_blank" rel="noreferrer" className="button secondary">
+          MonadVision ↗
+        </a>
+        <a href="https://faucet.monad.xyz" target="_blank" rel="noreferrer" className="button">
+          Get Faucet MON ↗
+        </a>
+      </div>
+    </div>
     <PageHead eyebrow="Network / 01" title="Testnet, observed." description="A direct view of Monad Testnet from its public JSON-RPC endpoint. No indexed or synthetic network metrics." action={<button className="button secondary" onClick={network.refresh} disabled={network.loading} data-testid="button-refresh-network"><RefreshCw size={13}/>{network.loading ? 'Checking RPC' : 'Refresh status'}</button>}/>
     <div className="grid-overview">
       <div className="panel status-panel"><div className="status-title">RPC endpoint</div><div className={`status-value ${correct ? 'ok-text' : network.loading ? '' : 'fail-text'}`}>{network.loading && !network.checkedAt ? 'Checking…' : correct ? 'Reachable' : 'Unavailable'}</div><div className="status-detail mono">{RPC}</div></div>
@@ -215,8 +323,28 @@ function TransactionPage({ network }: { network: ReturnType<typeof useNetworkSta
     <div className="two-col">
       <div className="form-stack">
         <Panel title="Receipt query" kicker="eth_getTransactionReceipt"><div className="panel-body form-stack">
-            <form className="form-stack" onSubmit={lookup}><div><label className="input-label" htmlFor="tx-hash">Transaction hash</label><input id="tx-hash" className="input" placeholder="0x…" value={input} onChange={e => setInput(e.target.value)} data-testid="input-transaction-hash"/></div>
-            <div className="button-row"><button className="button" type="submit" disabled={loading} data-testid="button-lookup-transaction">{loading ? <><LoaderCircle size={13}/>Querying RPC</> : <><Search size={13}/>Fetch transaction</>}</button><button type="button" className="button ghost" onClick={() => {setInput('');setReceipt(null);setTransaction(null);setPending(false);setError('');setTimestamp(null);}}>Clear</button></div></form>
+            <form className="form-stack" onSubmit={lookup}>
+              <div>
+                <label className="input-label" htmlFor="tx-hash">Transaction hash</label>
+                <input id="tx-hash" className="input mono" placeholder="0x…" value={input} onChange={e => setInput(e.target.value)} data-testid="input-transaction-hash"/>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap', marginTop: '10px' }}>
+                  <span style={{ fontSize: '10px', color: '#8C87A0', fontFamily: 'var(--app-font-mono)', fontWeight: 600 }}>TESTNET SAMPLES:</span>
+                  {[
+                    '0xf79b6bc811adca5760b9ae4fa3587a3b5c542358c92b3c59ba4578a51a4f3814',
+                    '0x0c6834909796af0fe1ca03c9a8602debef8bbe901d92b0fe832a2df951f48af2',
+                    '0x8830c23d943bc503c042868938b51f35c90b78bef99ad62aa33cbeb2c7545c32'
+                  ].map(sample => (
+                    <button key={sample} type="button" className="badge neutral mono" style={{ cursor: 'pointer', transition: 'all 0.15s ease' }} onClick={() => setInput(sample)} title="Click to fill sample hash">
+                      {short(sample, 8, 6)}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div className="button-row">
+                <button className="button" type="submit" disabled={loading} data-testid="button-lookup-transaction">{loading ? <><LoaderCircle size={13}/>Querying RPC</> : <><Search size={13}/>Fetch transaction</>}</button>
+                <button type="button" className="button ghost" onClick={() => {setInput('');setReceipt(null);setTransaction(null);setPending(false);setError('');setTimestamp(null);}}>Clear</button>
+              </div>
+            </form>
           <StateMessage error={error}/>
           {pending && <StateMessage neutral="Transaction found in the RPC but no receipt is available yet. It may still be pending; gas used and fee remain unavailable."/>}
           {!receipt && !pending && !loading && !error && <div className="empty-state"><strong>Receipt fields will appear here</strong>Paste a transaction hash to request its confirmed receipt directly from the configured RPC.</div>}
