@@ -28,8 +28,8 @@ async function rpc<T>(method: string, params: unknown[] = []): Promise<T> {
   return body.result as T;
 }
 function short(value?: string | null, left = 10, right = 8) { if (!value) return '—'; return value.length > left + right + 3 ? `${value.slice(0, left)}…${value.slice(-right)}` : value; }
-function validHash(value: string) { return /^0x[a-fA-F0-9]{64}$/.test(value.trim()); }
-function validAddress(value: string) { return /^0x[a-fA-F0-9]{40}$/.test(value.trim()); }
+function validHash(value?: string | null): value is string { return typeof value === 'string' && /^0x[a-fA-F0-9]{64}$/.test(value.trim()); }
+function validAddress(value?: string | null): value is string { return typeof value === 'string' && /^0x[a-fA-F0-9]{40}$/.test(value.trim()); }
 function weiToEth(value?: string) {
   if (!value) return null;
   try {
@@ -308,11 +308,12 @@ function ContractLabPage({ wallet }: { wallet: ReturnType<typeof useWallet> }) {
       const receipt = await waitForReceipt(hash);
       if (!receipt) { setDeployStatus(`No receipt returned yet for ${hash}. The deployment remains pending; re-check it in transaction lookup.`); return; }
       if (receipt.status !== '0x1') { setDeployError(`Deployment receipt was not successful. Verify the transaction: ${hash}`); return; }
-      if (!validAddress(receipt.contractAddress ?? '')) { setDeployError(`Receipt succeeded but did not include a contract address. Verify the deployment receipt: ${hash}`); return; }
-      setAddress(receipt.contractAddress);
+      if (!validAddress(receipt.contractAddress)) { setDeployError(`Receipt succeeded but did not include a contract address. Verify the deployment receipt: ${hash}`); return; }
+      const contractAddress = receipt.contractAddress;
+      setAddress(contractAddress);
       setCodeState('deployed');
-      localStorage.setItem('monarch-lens-registry-address', receipt.contractAddress);
-      setDeployStatus(`Verified successful receipt. Registry address saved in this browser: ${receipt.contractAddress}`);
+      localStorage.setItem('monarch-lens-registry-address', contractAddress);
+      setDeployStatus(`Verified successful receipt. Registry address saved in this browser: ${contractAddress}`);
     } catch(e) { setDeployError(e instanceof Error ? e.message : 'Wallet rejected or failed to submit deployment.'); }
     finally { setDeploying(false); }
   };

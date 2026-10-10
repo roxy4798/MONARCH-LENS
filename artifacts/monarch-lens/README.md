@@ -59,4 +59,4 @@ The app accesses the official public RPC directly from the browser; no server, d
 
 ## Cost and deployment status
 
-Only use testnet tokens from the official faucet. Testnet tokens have no real-world value. No contract deployment, GitHub push, or public hosting deployment is reported here until independently verified. Replit static hosting is free for hosting but data transfer may incur charges; verify plan limits and monitor usage to maintain an IDR 0 spend.
+Only use testnet tokens from the official faucet. Testnet tokens have no real-world value. No contract deployment, GitHub push, or public hosting deployment is reported here until independently verified. Deployments can be served using any static host (e.g. GitHub Pages, Vercel, Cloudflare Pages, Netlify) or locally with zero out-of-pocket costs to maintain an IDR 0 spend.
