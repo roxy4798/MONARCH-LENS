@@ -5,9 +5,9 @@
 - **Live Application**: [https://roxy4798.github.io/MONARCH-LENS/](https://roxy4798.github.io/MONARCH-LENS/)
 - **GitHub Repository**: [https://github.com/roxy4798/MONARCH-LENS](https://github.com/roxy4798/MONARCH-LENS)
 - **Target Network**: Monad Testnet (Chain ID: `10143` / `0x279f`)
-- **Cost Target**: IDR 0 / $0 (zero paid backend, zero paid RPC subscriptions)
+- **Operating model**: Uses public RPC endpoints and has no paid backend or RPC subscription. Wallet transactions may require testnet gas.
 
-Monarch Lens is a community-built, zero-cost developer tool that reads public Monad Testnet RPC data directly in the browser and connects with standard EIP-1193 Web3 wallets (MetaMask, Rabby, Phantom) for user-approved testnet operations. It is not an official Monad product.
+Monarch Lens is a community-built developer tool that reads public Monad Testnet RPC data directly in the browser and connects with standard EIP-1193 Web3 wallets for user-approved testnet operations. It is not an official Monad product.
 
 ---
 
@@ -23,9 +23,9 @@ Monarch Lens is a community-built, zero-cost developer tool that reads public Mo
 
 - **RPC Observability & Health Monitoring**: Live block height, query latency, fee metrics, and network status validation for Monad Testnet.
 - **Transaction Lookup**: Execution receipts, raw transaction inputs, gas used vs. gas limit distinction, and 18-decimal fee calculation directly from official RPC queries.
-- **Contract Lab**: Inspect onchain contract bytecode, execute user-signed raw calls, or deploy the source-controlled `ReportRegistry` contract to Monad Testnet.
+- **Contract Lab**: Inspect onchain contract bytecode, execute user-signed raw calls, or initiate deployment of the source-controlled `ReportRegistry` contract to Monad Testnet.
 - **Contract Benchmarks**: Interactive scenario runner executing receipt-backed test calls with real gas usage measurement.
-- **Report Registry & Integrity Verification**: Generate deterministic canonical JSON reports, compute SHA-256 digests, and commit commitments onchain to preserve audit provenance.
+- **Report Registry & Integrity Verification**: Generate deterministic canonical JSON reports and compute SHA-256 digests. Users can deploy their own registry and submit a digest; the repository does not claim a shared deployed registry or a successful registration without its address and transaction receipt.
 
 ---
 
@@ -33,14 +33,14 @@ Monarch Lens is a community-built, zero-cost developer tool that reads public Mo
 
 Verified against the official [Monad Developer Documentation](https://docs.monad.xyz/developer-essentials/testnet):
 
-| Parameter | Value |
-| :--- | :--- |
-| **Network Name** | Monad Testnet |
-| **Chain ID** | `10143` (`0x279f`) |
-| **RPC Endpoint** | `https://testnet-rpc.monad.xyz` |
-| **Currency Symbol** | `MON` |
+| Parameter           | Value                                                                                       |
+| :------------------ | :------------------------------------------------------------------------------------------ |
+| **Network Name**    | Monad Testnet                                                                               |
+| **Chain ID**        | `10143` (`0x279f`)                                                                          |
+| **RPC Endpoint**    | `https://testnet-rpc.monad.xyz`                                                             |
+| **Currency Symbol** | `MON`                                                                                       |
 | **Block Explorers** | [MonadVision](https://testnet.monadvision.com) · [Monadscan](https://testnet.monadscan.com) |
-| **Official Faucet** | [faucet.monad.xyz](https://faucet.monad.xyz/) |
+| **Official Faucet** | [faucet.monad.xyz](https://faucet.monad.xyz/)                                               |
 
 > [!NOTE]
 > All metrics reflect official Monad Testnet RPC receipts and browser-local state. Only testnet faucet funds are used; never use real funds or mainnet private keys.
@@ -52,7 +52,8 @@ Verified against the official [Monad Developer Documentation](https://docs.monad
 The repository includes `contracts/src/ReportRegistry.sol`, an EVM smart contract that records a SHA-256 report digest, submitter address, and registration timestamp on Monad Testnet.
 
 ### Onchain Deployment Status
-- **Source Code**: Source-controlled in [`contracts/src/ReportRegistry.sol`](file:///c:/MONARCH%20LENS/artifacts/monarch-lens/contracts/src/ReportRegistry.sol) (`pragma solidity 0.8.28;`).
+
+- **Source Code**: Source-controlled in [`artifacts/monarch-lens/contracts/src/ReportRegistry.sol`](artifacts/monarch-lens/contracts/src/ReportRegistry.sol) (`pragma solidity 0.8.28;`).
 - **Compiler Output**: Creation bytecode is pre-compiled (solc 0.8.28, optimizer 200 runs, Cancun EVM) and embedded directly into the frontend constant `REPORT_REGISTRY_CREATION_BYTECODE`.
 - **Deployment Status**: The contract is **not deployed as a global shared singleton** by the repository maintainer. Instead, each developer or team deploys their own registry instance to Monad Testnet on demand. Deployed addresses are saved locally in the browser's `localStorage` (`monarch-lens-registry-address`).
 - **Cryptographic Provenance**: Committing a report hash onchain proves that the report content matches the registered digest at the recorded block timestamp. It does not by itself prove that external benchmark claims or input data are truthful.
@@ -66,9 +67,11 @@ The repository includes `contracts/src/ReportRegistry.sol`, an EVM smart contrac
    If Foundry is installed locally, use a **dedicated testnet-only private key** funded via the official faucet:
    ```bash
    cd artifacts/monarch-lens
-   export MONAD_TESTNET_PRIVATE_KEY=<your-testnet-only-private-key>
+   read -rsp "Testnet-only private key: " MONAD_TESTNET_PRIVATE_KEY; echo
+   export MONAD_TESTNET_PRIVATE_KEY
    forge script contracts/script/DeployReportRegistry.s.sol:DeployReportRegistry \
      --rpc-url monad_testnet --broadcast
+   unset MONAD_TESTNET_PRIVATE_KEY
    ```
    > [!CAUTION]
    > Never use a mainnet private key. Never commit private keys to Git, include them in source code, or paste them into chat.
@@ -80,8 +83,8 @@ The repository includes `contracts/src/ReportRegistry.sol`, an EVM smart contrac
 ### Prerequisites
 
 - **Node.js**: >= 20.x (Node.js 24 recommended)
-- **pnpm**: Corepack pnpm 11.x or 12.x (`corepack pnpm` or `npx pnpm`)
-- **Foundry** *(Optional)*: Required only if compiling or testing Solidity contracts locally via `forge`
+- **pnpm**: Corepack-managed pnpm (use `corepack pnpm`)
+- **Foundry** _(Optional)_: Required only if compiling or testing Solidity contracts locally via `forge`
 
 ### Installation
 
@@ -103,6 +106,8 @@ corepack pnpm dev
 
 Open [http://localhost:5173](http://localhost:5173) in your browser.
 
+Vite binds to `localhost` by default. For a deliberate remote preview, set `HOST` to the required bind address and `ALLOWED_HOSTS` to comma-separated hostnames you control before running `corepack pnpm dev` or `corepack pnpm serve`. Both variables are required for a non-local bind; do not use arbitrary hostnames.
+
 ### Quality Assurance & Testing
 
 ```bash
@@ -119,7 +124,7 @@ corepack pnpm run build
 corepack pnpm serve
 ```
 
-### Foundry Contract Testing *(Optional)*
+### Foundry Contract Testing _(Optional)_
 
 If Foundry is installed:
 
@@ -128,7 +133,7 @@ cd artifacts/monarch-lens
 forge test -vv
 ```
 
-*Note: Offline unit tests in `ReportRegistry.t.sol` run directly with `forge test -vv` without requiring an active RPC fork.*
+_Note: Offline unit tests in `ReportRegistry.t.sol` run directly with `forge test -vv` without requiring an active RPC fork._
 
 ---
 
@@ -145,12 +150,14 @@ corepack pnpm run deploy:pages
 ```
 
 The script automatically generates a `deploy-manifest.json` in the static root recording:
+
 - Repository owner and name (`roxy4798/MONARCH-LENS`)
 - Source branch (`main`)
 - Source commit SHA
 - Build timestamp in UTC
 - Target deployment branch (`gh-pages`)
 - Base path (`/MONARCH-LENS/`)
+- Application version from `artifacts/monarch-lens/package.json`
 
 ---
 

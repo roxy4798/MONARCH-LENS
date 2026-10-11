@@ -28,16 +28,18 @@ The application verifies the connected wallet's chain ID and RPC endpoint health
 
 ### Contract Deployment Status
 
-1. **Source & Bytecode**: The Solidity contract is compiled using `solc 0.8.28` (optimizer enabled, 200 runs, Cancun EVM). Its creation bytecode is embedded in [`src/lib/report-registry.ts`](file:///c:/MONARCH%20LENS/artifacts/monarch-lens/src/lib/report-registry.ts) (`REPORT_REGISTRY_CREATION_BYTECODE`).
+1. **Source & Bytecode**: The Solidity contract is compiled using `solc 0.8.28` (optimizer enabled, 200 runs, Cancun EVM). Its creation bytecode is embedded in [`src/lib/report-registry.ts`](src/lib/report-registry.ts) (`REPORT_REGISTRY_CREATION_BYTECODE`).
 2. **Onchain Status**: The contract is **not deployed as a global singleton**. Each user or developer deploys their own instance to Monad Testnet. The deployed contract address is stored in browser `localStorage` (`monarch-lens-registry-address`).
 3. **Deployment Methods**:
    - **Via Contract Lab (Browser UI)**: Navigate to `#/contract-lab`, connect your wallet, and click **Review & deploy registry**.
    - **Via Foundry Terminal Script**:
      ```sh
      cd artifacts/monarch-lens
-     export MONAD_TESTNET_PRIVATE_KEY=<your-testnet-only-private-key>
+     read -rsp "Testnet-only private key: " MONAD_TESTNET_PRIVATE_KEY; echo
+     export MONAD_TESTNET_PRIVATE_KEY
      forge script contracts/script/DeployReportRegistry.s.sol:DeployReportRegistry \
        --rpc-url monad_testnet --broadcast
+     unset MONAD_TESTNET_PRIVATE_KEY
      ```
 
 ### Testing Contracts Locally
@@ -49,7 +51,7 @@ cd artifacts/monarch-lens
 forge test -vv
 ```
 
-*Note: The configured RPC alias in `foundry.toml` is `monad_testnet`. Offline unit tests run directly without specifying `--network` or connecting to an active RPC.*
+_Note: The configured RPC alias in `foundry.toml` is `monad_testnet`. Offline unit tests run directly without specifying `--network` or connecting to an active RPC._
 
 ---
 
@@ -76,6 +78,8 @@ corepack pnpm --filter @workspace/monarch-lens run build
 # Preview production build locally
 corepack pnpm --filter @workspace/monarch-lens run serve
 ```
+
+Vite binds to `localhost` by default. For a deliberate remote preview, set `HOST` to the required bind address and `ALLOWED_HOSTS` to comma-separated hostnames you control before running the dev or preview command. Both variables are required for a non-local bind.
 
 The frontend reads the official public RPC directly from the browser; no database, backend server, or paid RPC subscription is required.
 

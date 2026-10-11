@@ -1,12 +1,12 @@
 {
   "name": "@workspace/monarch-lens",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "vite --config vite.config.ts --host 0.0.0.0",
+    "dev": "vite --config vite.config.ts",
     "build": "vite build --config vite.config.ts --base /MONARCH-LENS/",
-    "serve": "vite preview --config vite.config.ts --host 0.0.0.0",
+    "serve": "vite preview --config vite.config.ts",
     "test": "tsx --test src/lib/report-registry.test.ts src/lib/fee.test.ts",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
