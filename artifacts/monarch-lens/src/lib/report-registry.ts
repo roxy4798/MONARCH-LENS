@@ -43,3 +43,24 @@ function assertBytes32(value: string): void {
     throw new Error('Report hash must be a 32-byte 0x-prefixed value.');
   }
 }
+
+/**
+ * Canonical JSON serialization for deterministic hashing.
+ * Sorts object keys recursively at all levels.
+ * Arrays preserve their original item ordering.
+ * Primitives (string, number, boolean, null) serialize deterministically.
+ */
+export function stableJson(value: unknown): string {
+  if (value === null || typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') {
+    const serialized = JSON.stringify(value);
+    if (serialized === undefined) throw new Error('Report data contains a non-JSON value.');
+    return serialized;
+  }
+  if (Array.isArray(value)) return `[${value.map(stableJson).join(',')}]`;
+  if (typeof value === 'object') {
+    const record = value as Record<string, unknown>;
+    return `{${Object.keys(record).sort().map(key => `${JSON.stringify(key)}:${stableJson(record[key])}`).join(',')}}`;
+  }
+  throw new Error('Report data contains a value that cannot be serialized.');
+}
+

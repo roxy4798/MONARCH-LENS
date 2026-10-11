@@ -3,7 +3,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ErrorBoundary } from '@/components/error-boundary';
 import { Toaster } from '@/components/ui/toaster';
 import { TooltipProvider } from '@/components/ui/tooltip';
-import { decodeReportRecord, encodeGetReport, encodeRegisterReport, REPORT_REGISTRY_CREATION_BYTECODE, REPORT_REGISTRY_VERSION } from '@/lib/report-registry';
+import { decodeReportRecord, encodeGetReport, encodeRegisterReport, REPORT_REGISTRY_CREATION_BYTECODE, REPORT_REGISTRY_VERSION, stableJson } from '@/lib/report-registry';
 import NotFound from '@/pages/not-found';
 import { Link, Route, Switch, useLocation, Router as WouterRouter } from 'wouter';
 import { ArrowDownLeft, ArrowRight, Blocks, Check, ChevronRight, Copy, FileCheck2, Fingerprint, FlaskConical, Gauge, LayoutDashboard, LoaderCircle, RefreshCw, Search, ShieldCheck, Wallet } from 'lucide-react';
@@ -42,19 +42,6 @@ function weiToEth(value?: string) {
 }
 function hexInt(value?: string) { if (!value) return null; try { return Number(BigInt(value)); } catch { return null; } }
 function formatDate(value?: string | number | null) { if (value === undefined || value === null || value === '') return '—'; const d = typeof value === 'number' ? new Date(value) : new Date(value); return Number.isNaN(d.getTime()) ? '—' : d.toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'medium' }); }
-function stableJson(value: unknown): string {
-  if (value === null || typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') {
-    const serialized = JSON.stringify(value);
-    if (serialized === undefined) throw new Error('Report data contains a non-JSON value.');
-    return serialized;
-  }
-  if (Array.isArray(value)) return `[${value.map(stableJson).join(',')}]`;
-  if (typeof value === 'object') {
-    const record = value as Record<string, unknown>;
-    return `{${Object.keys(record).sort().map(key => `${JSON.stringify(key)}:${stableJson(record[key])}`).join(',')}}`;
-  }
-  throw new Error('Report data contains a value that cannot be serialized.');
-}
 async function sha256Hex(value: string): Promise<string> {
   const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(value));
   return `0x${Array.from(new Uint8Array(digest)).map(byte => byte.toString(16).padStart(2, '0')).join('')}`;
