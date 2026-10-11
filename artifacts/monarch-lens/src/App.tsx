@@ -4,6 +4,7 @@ import { ErrorBoundary } from '@/components/error-boundary';
 import { Toaster } from '@/components/ui/toaster';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { decodeReportRecord, encodeGetReport, encodeRegisterReport, REPORT_REGISTRY_CREATION_BYTECODE, REPORT_REGISTRY_VERSION, stableJson } from '@/lib/report-registry';
+import { calculateTransactionFee, formatGasPrice, formatWeiToMon } from '@/lib/fee';
 import NotFound from '@/pages/not-found';
 import { Link, Route, Switch, useLocation, Router as WouterRouter } from 'wouter';
 import { ArrowDownLeft, ArrowRight, Blocks, Check, ChevronRight, Copy, FileCheck2, Fingerprint, FlaskConical, Gauge, LayoutDashboard, LoaderCircle, RefreshCw, Search, ShieldCheck, Wallet } from 'lucide-react';
@@ -15,7 +16,7 @@ const SOFTWARE_VERSION = '0.1.0';
 
 type RpcStatus = { loading: boolean; error: string; chainId: number | null; blockNumber: string | null; blockTimestamp: number | null; checkedAt: number | null };
 type Receipt = { transactionHash: string; status?: string; blockNumber?: string; gasUsed?: string; effectiveGasPrice?: string; from?: string; to?: string; contractAddress?: string | null };
-type TransactionInfo = { hash: string; from?: string; to?: string | null; gas?: string; blockNumber?: string | null };
+type TransactionInfo = { hash: string; from?: string; to?: string | null; gas?: string; gasPrice?: string; maxFeePerGas?: string; maxPriorityFeePerGas?: string; blockNumber?: string | null };
 type BenchRun = { scenario: string; txHash: string; success: boolean | null; gasUsed: string | null; timestamp: string; blockTimestamp?: string; blockNumber?: string; target?: string; calldata?: string; payloadHash?: string };
 type WalletProvider = { request: (args: { method: string; params?: unknown[] }) => Promise<unknown>; on?: (event: string, cb: (...args: unknown[]) => void) => void; removeListener?: (event: string, cb: (...args: unknown[]) => void) => void };
 declare global { interface Window { ethereum?: WalletProvider } }
@@ -31,14 +32,7 @@ function short(value?: string | null, left = 10, right = 8) { if (!value) return
 function validHash(value?: string | null): value is string { return typeof value === 'string' && /^0x[a-fA-F0-9]{64}$/.test(value.trim()); }
 function validAddress(value?: string | null): value is string { return typeof value === 'string' && /^0x[a-fA-F0-9]{40}$/.test(value.trim()); }
 function weiToEth(value?: string) {
-  if (!value) return null;
-  try {
-    const wei = BigInt(value);
-    const unit = 10n ** 18n;
-    const whole = (wei / unit).toString();
-    const fraction = (wei % unit).toString().padStart(18, '0').slice(0, 6).replace(/0+$/, '');
-    return `${whole}${fraction ? `.${fraction}` : ''} MON`;
-  } catch { return null; }
+  return formatWeiToMon(value);
 }
 function hexInt(value?: string) { if (!value) return null; try { return Number(BigInt(value)); } catch { return null; } }
 function formatDate(value?: string | number | null) { if (value === undefined || value === null || value === '') return '—'; const d = typeof value === 'number' ? new Date(value) : new Date(value); return Number.isNaN(d.getTime()) ? '—' : d.toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'medium' }); }
@@ -302,9 +296,13 @@ function TransactionPage({ network }: { network: ReturnType<typeof useNetworkSta
     } catch (e) { setError(e instanceof Error ? e.message : 'Transaction lookup failed.'); }
     finally { setLoading(false); }
   };
-  const fee = transaction?.gas && receipt?.effectiveGasPrice
-    ? weiToEth(`0x${(BigInt(transaction.gas) * BigInt(receipt.effectiveGasPrice)).toString(16)}`)
-    : null;
+  const feeDetails = calculateTransactionFee({
+    gasUsed: receipt?.gasUsed,
+    gasLimit: transaction?.gas,
+    effectiveGasPrice: receipt?.effectiveGasPrice,
+    maxFeePerGas: transaction?.maxFeePerGas,
+    gasPrice: transaction?.gasPrice,
+  });
   return <div className="content fade-in">
     <PageHead eyebrow="Explorer / 02" title="Transaction lookup" description="Fetch a receipt from the Monad Testnet RPC. Receipt gas reflects executed usage; it is not an estimate."/>
     <div className="two-col">
@@ -347,10 +345,13 @@ function TransactionPage({ network }: { network: ReturnType<typeof useNetworkSta
           <Detail label="Block timestamp" value={timestamp ? formatDate(timestamp * 1000) : 'Unavailable'}/>
           <Detail label="From" value={receipt?.from ?? transaction?.from ?? 'Unavailable'}/>
           <Detail label="To" value={receipt?.to ?? transaction?.to ?? (transaction && !transaction.to ? 'Contract creation' : 'Unavailable')}/>
-          <Detail label="Gas used · receipt" value={receipt?.gasUsed ? BigInt(receipt.gasUsed).toString() : 'Unavailable until receipt'}/>
+          <Detail label="Gas used · receipt" value={receipt?.gasUsed ? BigInt(receipt.gasUsed).toString() : (pending ? 'Unavailable (pending)' : 'Unavailable until receipt')}/>
           <Detail label="Gas limit · transaction" value={transaction?.gas ? BigInt(transaction.gas).toString() : 'Unavailable'}/>
-          <Detail label="Effective gas price" value={weiToEth(receipt?.effectiveGasPrice) ?? (receipt?.effectiveGasPrice ? receipt.effectiveGasPrice : 'Unavailable')}/>
-          <Detail label="Calculated fee · gas limit × effective price" value={fee ?? 'Unavailable'}/>
+          <Detail label="Effective gas price" value={feeDetails.effectiveGasPriceFormatted ?? (receipt?.effectiveGasPrice ? `${receipt.effectiveGasPrice} wei` : 'Unavailable')}/>
+          <Detail label="Execution fee · gas used × effective price" value={feeDetails.actualFeeFormatted ?? (pending ? 'Unavailable (pending)' : 'Unavailable')}/>
+          {feeDetails.maxFeeEstimateFormatted && (
+            <Detail label="Max fee estimate · gas limit × max price" value={`${feeDetails.maxFeeEstimateFormatted} (Estimate)`}/>
+          )}
           <div className="detail-item"><div className="detail-label">MonadVision</div><div className="detail-value"><a href={`${TESTNET_EXPLORER}/tx/${receipt?.transactionHash ?? transaction?.hash}`} target="_blank" rel="noreferrer">Open transaction ↗</a></div></div>
         </div> : <div className="panel-body"><div className="empty-state"><strong>Awaiting transaction</strong>No transaction details to display.</div></div>}
       </Panel>
