@@ -107,6 +107,12 @@ try {
   console.log(`Cloning gh-pages branch to temporary workdir: ${tempDir}`);
   execSync(`git clone --branch gh-pages --depth 1 "${originUrl}" "${tempDir}"`, { stdio: 'inherit' });
 
+  // Inherit local git user config to respect GitHub email privacy settings
+  const userName = execSync('git config user.name', { cwd: rootDir, encoding: 'utf8' }).trim() || 'roxy4798';
+  const userEmail = execSync('git config user.email', { cwd: rootDir, encoding: 'utf8' }).trim() || '178382217+roxy4798@users.noreply.github.com';
+  execSync(`git config user.name "${userName}"`, { cwd: tempDir });
+  execSync(`git config user.email "${userEmail}"`, { cwd: tempDir });
+
   // Clean old assets
   const oldAssetsDir = path.join(tempDir, 'assets');
   if (fs.existsSync(oldAssetsDir)) {
