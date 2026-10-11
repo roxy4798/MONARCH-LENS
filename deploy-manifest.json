@@ -1,0 +1,10 @@
+{
+  "repository": "roxy4798/MONARCH-LENS",
+  "sourceBranch": "main",
+  "sourceCommit": "41cb97f207294dcf6f286fce47e848bdbef86c59",
+  "sourceCommitShort": "41cb97f",
+  "buildTimestampUtc": "2026-10-11T04:58:22.245Z",
+  "targetBranch": "gh-pages",
+  "applicationVersion": "0.1.0",
+  "basePath": "/MONARCH-LENS/"
+}
