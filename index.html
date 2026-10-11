@@ -12,12 +12,24 @@
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:title" content="Monarch Lens — Monad Testnet Observability" />
     <meta name="twitter:description" content="High-performance Monad Testnet observability, real-time transaction inspection, and smart contract benchmarking workspace." />
-    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="icon" type="image/svg+xml" href="/MONARCH-LENS/favicon.svg" />
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <script type="module" crossorigin src="/assets/index-Bcb9I-t-.js"></script>
-    <link rel="stylesheet" crossorigin href="/assets/index-CkKHSTXX.css">
+    <script>
+      (function() {
+        var base = '/MONARCH-LENS/';
+        var path = window.location.pathname;
+        if (path.indexOf(base) === 0 && path.length > base.length) {
+          var route = path.slice(base.length).replace(/^\/+/, '');
+          if (route && route.indexOf('assets/') !== 0 && route.indexOf('.') === -1) {
+            window.location.replace(base + '#/' + route + window.location.search);
+          }
+        }
+      })();
+    </script>
+    <script type="module" crossorigin src="/MONARCH-LENS/assets/index-C8it_Afn.js"></script>
+    <link rel="stylesheet" crossorigin href="/MONARCH-LENS/assets/index-CkKHSTXX.css">
   </head>
   <body class="dark bg-[#08070E] text-[#F6F5FA] antialiased">
     <div id="root"></div>
