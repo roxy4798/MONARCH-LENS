@@ -74,6 +74,11 @@ overrides:
   esbuild: "0.28.2"
   # orval pins js-yaml to an exact version older than the CVE fix (>=4.3.2)
   js-yaml: '4.3.2'
+  # Security overrides for known CVEs
+  proxy-addr: '^2.0.8'
+  postcss-selector-parser: '^7.1.6'
+  fast-uri: '^3.1.8'
+  source-map-js: '^1.2.2'
 
 allowBuilds:
   '@swc/core': true

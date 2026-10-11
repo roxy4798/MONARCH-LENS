@@ -32,15 +32,15 @@ export default defineConfig({
   server: {
     port,
     strictPort: false,
-    host: '0.0.0.0',
-    allowedHosts: true,
+    host: process.env.HOST || 'localhost',
+    allowedHosts: process.env.ALLOWED_HOSTS ? process.env.ALLOWED_HOSTS.split(',') : undefined,
     fs: {
       strict: true,
     },
   },
   preview: {
     port,
-    host: '0.0.0.0',
-    allowedHosts: true,
+    host: process.env.HOST || 'localhost',
+    allowedHosts: process.env.ALLOWED_HOSTS ? process.env.ALLOWED_HOSTS.split(',') : undefined,
   },
 });

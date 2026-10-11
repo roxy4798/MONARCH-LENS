@@ -1,62 +1,90 @@
-# Monarch Lens
+# Monarch Lens Application
 
-Monarch Lens is an independent community-built developer observability and smart-contract benchmarking tool for Monad. It reads public Monad Testnet RPC data in the browser and uses an injected wallet for user-approved testnet transactions. It is not an official Monad product.
+Monarch Lens is an independent community-built developer observability and smart-contract benchmarking tool for Monad Testnet. It reads public Monad Testnet RPC data in the browser and connects with injected Web3 wallets for user-approved testnet operations. It is not an official Monad product.
 
-## Network configuration
+- **Production URL**: [https://roxy4798.github.io/MONARCH-LENS/](https://roxy4798.github.io/MONARCH-LENS/)
+- **Repository**: [https://github.com/roxy4798/MONARCH-LENS](https://github.com/roxy4798/MONARCH-LENS)
+- **Deployment Status**: Web application is published and live via GitHub Pages (`gh-pages` branch). Smart contract (`ReportRegistry.sol`) is compiled and embedded in the frontend for on-demand user deployment.
 
-Verified against the [Monad Testnet docs](https://docs.monad.xyz/developer-essentials/testnet):
+---
 
-- Network: Monad Testnet
-- Chain ID: `10143`
-- RPC: `https://testnet-rpc.monad.xyz`
-- Explorers: [MonadVision](https://testnet.monadvision.com) · [Monadscan](https://testnet.monadscan.com)
-- Faucet: [faucet.monad.xyz](https://faucet.monad.xyz/)
+## Network Configuration
 
-The app checks the actual RPC chain ID before showing the connection as healthy. RPC-provided block and receipt fields are presented as measurements; unavailable fields are not estimated.
+Verified against the official [Monad Testnet Documentation](https://docs.monad.xyz/developer-essentials/testnet):
 
-## Smart contract
+- **Network**: Monad Testnet
+- **Chain ID**: `10143` (`0x279f`)
+- **RPC Endpoint**: `https://testnet-rpc.monad.xyz`
+- **Block Explorers**: [MonadVision](https://testnet.monadvision.com) · [Monadscan](https://testnet.monadscan.com)
+- **Official Faucet**: [faucet.monad.xyz](https://faucet.monad.xyz/)
 
-`contracts/src/ReportRegistry.sol` stores a SHA-256 report digest, its submitter, and its registration timestamp. The registry rejects zero hashes and duplicate registrations. A hash proves only that report content matches a commitment; it does not independently establish that report claims or inputs are truthful.
+The application verifies the connected wallet's chain ID and RPC endpoint health before showing the network as healthy. All block, receipt, and gas parameters are presented directly as received from RPC queries without fabrication.
 
-The Contract Lab includes the source-compiled registry creation bytecode for an explicit user-signed wallet deployment. If the Solidity source or compiler settings change, rebuild the contract and refresh `src/lib/report-registry.ts` before deploying from the UI. Contract calls are guarded to Monad Testnet (chain ID `10143`); the generic raw-call form remains ABI-agnostic.
+---
 
-The report flow creates deterministic JSON and SHA-256, exports the report, compares a supplied report to an expected hash, registers the digest through the typed registry ABI, and reads/decodes registry records. The benchmark runner offers up to three manually confirmed registry writes per run; each gets a distinct hash. Other contract calls are available as a manual scenario. All measurements come from RPC receipts/blocks and browser-local history.
+## Smart Contract: ReportRegistry
 
-### Test
+`contracts/src/ReportRegistry.sol` stores a SHA-256 report digest, its submitter address, and registration timestamp on Monad Testnet. The registry enforces one-time registration per report digest (`AlreadyRegistered` revert) and disallows zero hashes (`InvalidReportHash` revert). Committing a hash proves content integrity relative to the commitment; it does not independently verify external claims or input accuracy.
 
-Install [Foundry 1.8 or later](https://docs.monad.xyz/tooling-and-infra/toolkits/foundry) for Monad-aware execution, then run:
+### Contract Deployment Status
+
+1. **Source & Bytecode**: The Solidity contract is compiled using `solc 0.8.28` (optimizer enabled, 200 runs, Cancun EVM). Its creation bytecode is embedded in [`src/lib/report-registry.ts`](file:///c:/MONARCH%20LENS/artifacts/monarch-lens/src/lib/report-registry.ts) (`REPORT_REGISTRY_CREATION_BYTECODE`).
+2. **Onchain Status**: The contract is **not deployed as a global singleton**. Each user or developer deploys their own instance to Monad Testnet. The deployed contract address is stored in browser `localStorage` (`monarch-lens-registry-address`).
+3. **Deployment Methods**:
+   - **Via Contract Lab (Browser UI)**: Navigate to `#/contract-lab`, connect your wallet, and click **Review & deploy registry**.
+   - **Via Foundry Terminal Script**:
+     ```sh
+     cd artifacts/monarch-lens
+     export MONAD_TESTNET_PRIVATE_KEY=<your-testnet-only-private-key>
+     forge script contracts/script/DeployReportRegistry.s.sol:DeployReportRegistry \
+       --rpc-url monad_testnet --broadcast
+     ```
+
+### Testing Contracts Locally
+
+Unit tests in `contracts/test/ReportRegistry.t.sol` run offline with Foundry:
 
 ```sh
 cd artifacts/monarch-lens
-forge test --network monad -vv
+forge test -vv
 ```
 
-### Testnet deployment from a local terminal
+*Note: The configured RPC alias in `foundry.toml` is `monad_testnet`. Offline unit tests run directly without specifying `--network` or connecting to an active RPC.*
 
-For terminal deployment, use a dedicated testnet-only deployer with official faucet funds. Never use a mainnet key. Keep the key in a local environment variable or secret manager; never put it in source control or paste it into chat.
+---
 
-```sh
-cd artifacts/monarch-lens
-export MONAD_TESTNET_PRIVATE_KEY=<your-testnet-only-key>
-forge script contracts/script/DeployReportRegistry.s.sol:DeployReportRegistry \
-  --rpc-url monad_testnet --broadcast
-```
-
-The deployment script aborts unless the connected chain ID is `10143`. Verify the resulting address and transaction in MonadVision or Monadscan before adding them to the app. The browser UI also supports deploying through a connected wallet so no private key needs to enter the app. A deployment has not been made by this source setup.
-
-## Local app
+## Local Development & Build
 
 From the workspace root:
 
 ```sh
-pnpm install
-pnpm --filter @workspace/monarch-lens run dev
-pnpm --filter @workspace/monarch-lens run typecheck
-pnpm --filter @workspace/monarch-lens run build
+# Install dependencies
+corepack pnpm install --frozen-lockfile
+
+# Run development server (localhost:5173)
+corepack pnpm --filter @workspace/monarch-lens run dev
+
+# Run TypeScript typechecks
+corepack pnpm --filter @workspace/monarch-lens run typecheck
+
+# Run unit tests (ABI helpers, fee math, canonical JSON hashing)
+corepack pnpm --filter @workspace/monarch-lens run test
+
+# Build production bundle (configured for /MONARCH-LENS/ base path)
+corepack pnpm --filter @workspace/monarch-lens run build
+
+# Preview production build locally
+corepack pnpm --filter @workspace/monarch-lens run serve
 ```
 
-The app accesses the official public RPC directly from the browser; no server, database, or paid RPC service is required.
+The frontend reads the official public RPC directly from the browser; no database, backend server, or paid RPC subscription is required.
 
-## Cost and deployment status
+---
 
-Only use testnet tokens from the official faucet. Testnet tokens have no real-world value. No contract deployment, GitHub push, or public hosting deployment is reported here until independently verified. Deployments can be served using any static host (e.g. GitHub Pages, Vercel, Cloudflare Pages, Netlify) or locally with zero out-of-pocket costs to maintain an IDR 0 spend.
+## Production Deployment & Base Path
+
+The production build requires the `/MONARCH-LENS/` base path for GitHub Pages hosting:
+
+- **Build Output**: `artifacts/monarch-lens/dist/public`
+- **Routing**: Hash-based routing (`#/`, `#/contract-lab`, `#/transactions`, `#/benchmarks`, `#/reports`) for reliable direct navigation and static CDN compatibility.
+- **Verification Manifest**: Every deployment produces `deploy-manifest.json` recording the source commit SHA, repository, build timestamp, and deployment branch.
