@@ -7,6 +7,7 @@ import { decodeReportRecord, encodeGetReport, encodeRegisterReport, REPORT_REGIS
 import { calculateTransactionFee, formatGasPrice, formatWeiToMon } from '@/lib/fee';
 import NotFound from '@/pages/not-found';
 import { Link, Route, Switch, useLocation, Router as WouterRouter } from 'wouter';
+import { useHashLocation } from 'wouter/use-hash-location';
 import { ArrowDownLeft, ArrowRight, Blocks, Check, ChevronRight, Copy, FileCheck2, Fingerprint, FlaskConical, Gauge, LayoutDashboard, LoaderCircle, RefreshCw, Search, ShieldCheck, Wallet } from 'lucide-react';
 
 const queryClient = new QueryClient();
@@ -264,7 +265,12 @@ function NetworkPage({ network }: { network: ReturnType<typeof useNetworkStatus>
 }
 
 function TransactionPage({ network }: { network: ReturnType<typeof useNetworkStatus> }) {
-  const [input, setInput] = useState(() => new URLSearchParams(window.location.search).get('hash') ?? '');
+  const [input, setInput] = useState(() => {
+    const hash = typeof window !== 'undefined' ? window.location.hash : '';
+    const search = typeof window !== 'undefined' ? window.location.search : '';
+    const hashSearch = hash.includes('?') ? hash.slice(hash.indexOf('?')) : '';
+    return new URLSearchParams(search || hashSearch).get('hash') ?? '';
+  });
   const [receipt, setReceipt] = useState<Receipt | null>(null);
   const [transaction, setTransaction] = useState<TransactionInfo | null>(null);
   const [timestamp, setTimestamp] = useState<number | null>(null);
@@ -781,6 +787,6 @@ function AppRoutes() {
   </Switch></Shell>;
 }
 function App() {
-  return <QueryClientProvider client={queryClient}><TooltipProvider><WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, '')}><ErrorBoundary><AppRoutes/></ErrorBoundary></WouterRouter><Toaster/></TooltipProvider></QueryClientProvider>;
+  return <QueryClientProvider client={queryClient}><TooltipProvider><WouterRouter hook={useHashLocation}><ErrorBoundary><AppRoutes/></ErrorBoundary></WouterRouter><Toaster/></TooltipProvider></QueryClientProvider>;
 }
 export default App;

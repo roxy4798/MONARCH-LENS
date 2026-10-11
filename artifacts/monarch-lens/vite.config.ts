@@ -4,7 +4,7 @@ import tailwindcss from '@tailwindcss/vite';
 import { defineConfig } from 'vite';
 
 const port = process.env.PORT ? Number(process.env.PORT) : 5173;
-const basePath = process.env.BASE_PATH || '/';
+const basePath = process.env.BASE_PATH || (process.env.NODE_ENV === 'production' ? '/MONARCH-LENS/' : '/');
 
 export default defineConfig({
   base: basePath,
